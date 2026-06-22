@@ -53,7 +53,11 @@ const taskStatusSortOrder: Record<TaskStatus, number> = {
 }
 
 export function registerBackgroundTaskTool(amp: ToolRegistrar): Subscription {
-	const manager = createBackgroundTaskManager({ notify: createNotifier(amp) })
+	const notifier = createNotifier(amp)
+	const manager =
+		notifier === undefined
+			? createBackgroundTaskManager()
+			: createBackgroundTaskManager({ notify: notifier })
 	const statusController = createBackgroundTaskStatusController(amp, manager)
 	const subscription = amp.registerTool({
 		name: 'background_task',
