@@ -37,4 +37,4 @@ Only running processes are retained as background tasks. When a process exits, t
 any configured exit notification, optionally including its final snapshot, and then removes the tmux
 task session.
 
-See [./OVERVIEW.md] for all the details.
+See [OVERVIEW.md](./OVERVIEW.md) for all the details.
