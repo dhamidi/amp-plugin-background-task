@@ -1,0 +1,82 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="contains-notification" expected="pass">
+	<summary>A contains notification is delivered when matching task output appears.</summary>
+
+	<defaults wait-for-idle-ms="200" history-lines="40"></defaults>
+
+	<run>
+		<bt-start id="notifier" name="notification-task">
+			<script type="application/javascript">
+				process.stdin.setEncoding('utf8')
+				let buffered = ''
+				console.log('notifier-ready')
+				for await (const chunk of process.stdin) {
+					buffered += chunk
+					const lines = buffered.split('\n')
+					buffered = lines.pop() ?? ''
+					for (const line of lines) console.log(`event:${line.replace(/\r$/, '')}`)
+				}
+			</script>
+			<notifications enabled="false"></notifications>
+		</bt-start>
+
+		<bt-wait id="ready" task="notifier" timeout-ms="2000">
+			<contains>notifier-ready</contains>
+		</bt-wait>
+
+		<bt-configure-notifications id="configure" task="notifier">
+			<notifications
+				enabled="true"
+				steer="false"
+				cooldown-ms="0"
+				debounce-ms="0"
+				max-messages="1"
+			>
+				<trigger
+					type="contains"
+					pattern="event:notify-me"
+					include-snapshot="true"
+				></trigger>
+			</notifications>
+		</bt-configure-notifications>
+
+		<bt-send id="send-trigger" task="notifier" wait-for-idle-ms="200">
+			notify-me
+			<key>Enter</key>
+		</bt-send>
+
+		<bt-wait id="trigger-output" task="notifier" timeout-ms="2000">
+			<contains>event:notify-me</contains>
+		</bt-wait>
+
+		<bt-wait id="settled" task="notifier" idle-ms="200" timeout-ms="2000"></bt-wait>
+	</run>
+
+	<then>
+		<expect-step step="configure" action="configure_notifications" status="running">
+			<field name="notifications.enabled">
+				<equals>true</equals>
+			</field>
+			<field name="notifications.triggers.0.pattern">
+				<equals>event:notify-me</equals>
+			</field>
+		</expect-step>
+
+		<expect-step step="trigger-output" action="wait" matched="true">
+			<field name="snapshot.screen">
+				<contains>event:notify-me</contains>
+			</field>
+		</expect-step>
+
+		<expect-notification count="1">
+			<contains>matched "event:notify-me"</contains>
+			<contains>Use background_task with action="snapshot"</contains>
+		</expect-notification>
+	</then>
+
+	<cleanup>
+		<bt-stop task="notifier" mode="kill"></bt-stop>
+	</cleanup>
+</scenario>

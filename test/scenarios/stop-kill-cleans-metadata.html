@@ -1,0 +1,44 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="stop-kill-cleans-metadata" expected="pass">
+	<summary>
+		Killing a task removes the tmux session so startup reconciliation cannot recover it.
+	</summary>
+
+	<defaults wait-for-idle-ms="150" history-lines="30"></defaults>
+
+	<run>
+		<bt-start id="worker" name="kill-cleanup-worker" keep-alive="true">
+			<script type="application/javascript">
+				console.log('kill-cleanup-ready')
+				setInterval(() => {}, 1_000_000)
+			</script>
+		</bt-start>
+
+		<bt-wait id="ready" task="worker" timeout-ms="2000">
+			<contains>kill-cleanup-ready</contains>
+		</bt-wait>
+
+		<bt-stop id="killed" task="worker" mode="kill"></bt-stop>
+		<runner-restart id="restart"></runner-restart>
+		<bt-list id="listed"></bt-list>
+	</run>
+
+	<then>
+		<expect-step step="killed" action="stop" status="stopped">
+			<field name="message">
+				<contains>Stopped</contains>
+			</field>
+		</expect-step>
+
+		<expect-step step="listed" action="list" status="ok">
+			<field name="tasks.0.id">
+				<equals></equals>
+			</field>
+			<field name="message">
+				<contains>Found 0 background tasks.</contains>
+			</field>
+		</expect-step>
+	</then>
+</scenario>

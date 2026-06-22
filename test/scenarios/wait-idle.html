@@ -1,0 +1,36 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="wait-idle" expected="pass">
+	<summary>A running task can be waited on until its terminal output becomes idle.</summary>
+
+	<defaults wait-for-idle-ms="100" history-lines="40"></defaults>
+
+	<run>
+		<bt-start id="worker" name="idle-worker">
+			<script type="application/javascript">
+				console.log('idle-ready')
+				setInterval(() => {}, 1_000_000)
+			</script>
+		</bt-start>
+
+		<bt-wait id="quiet" task="worker" idle-ms="300" timeout-ms="2000"></bt-wait>
+	</run>
+
+	<then>
+		<expect-step step="quiet" action="wait" matched="true">
+			<field name="reason">
+				<contains>idle for 300ms</contains>
+			</field>
+			<field name="snapshot.screen">
+				<contains>idle-ready</contains>
+			</field>
+		</expect-step>
+
+		<expect-task task="worker" status="running" name="idle-worker"></expect-task>
+	</then>
+
+	<cleanup>
+		<bt-stop task="worker" mode="kill"></bt-stop>
+	</cleanup>
+</scenario>

@@ -1,0 +1,42 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="wait-not-contains" expected="pass">
+	<summary>A wait can match when text disappears from the terminal snapshot.</summary>
+
+	<defaults wait-for-idle-ms="100" history-lines="0"></defaults>
+
+	<run>
+		<bt-start id="display" name="clearing-display">
+			<script type="application/javascript">
+				console.log('transient-state')
+				setTimeout(() => {
+					process.stdout.write('\x1b[2J\x1b[Hstable-state\n')
+				}, 100)
+				setInterval(() => {}, 1_000_000)
+			</script>
+		</bt-start>
+
+		<bt-wait id="cleared" task="display" timeout-ms="2000">
+			<not-contains>transient-state</not-contains>
+		</bt-wait>
+	</run>
+
+	<then>
+		<expect-step step="cleared" action="wait" matched="true">
+			<field name="reason">
+				<contains>no longer contains</contains>
+			</field>
+			<field name="snapshot.screen">
+				<contains>stable-state</contains>
+				<not-contains>transient-state</not-contains>
+			</field>
+		</expect-step>
+
+		<expect-task task="display" status="running" name="clearing-display"></expect-task>
+	</then>
+
+	<cleanup>
+		<bt-stop task="display" mode="kill"></bt-stop>
+	</cleanup>
+</scenario>

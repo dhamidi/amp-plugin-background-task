@@ -1,0 +1,36 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="stale-ephemeral-reaped-on-startup" expected="pass">
+	<summary>Startup reconciliation reaps stale non-keepAlive sessions for this workspace.</summary>
+
+	<setup>
+		<tmux-task-fixture
+			id="stale"
+			name="stale-ephemeral-worker"
+			keep-alive="false"
+			last-activity-age-ms="86400000"
+		>
+			<script type="application/javascript">
+				console.log('stale-fixture-ready')
+				setInterval(() => undefined, 60_000)
+			</script>
+		</tmux-task-fixture>
+	</setup>
+
+	<run>
+		<runner-restart id="restart" wait-after-ms="400"></runner-restart>
+		<bt-list id="listed"></bt-list>
+	</run>
+
+	<then>
+		<expect-step step="listed" action="list" status="ok">
+			<field name="tasks.0.id">
+				<equals></equals>
+			</field>
+			<field name="message">
+				<contains>Found 0 background tasks.</contains>
+			</field>
+		</expect-step>
+	</then>
+</scenario>

@@ -1,0 +1,45 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="wait-timeout" expected="pass">
+	<summary>A wait that does not match before its timeout records matched=false.</summary>
+
+	<defaults wait-for-idle-ms="100" history-lines="20"></defaults>
+
+	<run>
+		<bt-start id="worker" name="timeout-worker">
+			<script type="application/javascript">
+				console.log('timeout-worker-ready')
+				setInterval(() => {}, 1_000_000)
+			</script>
+		</bt-start>
+
+		<bt-wait id="ready" task="worker" timeout-ms="2000">
+			<contains>timeout-worker-ready</contains>
+		</bt-wait>
+
+		<bt-wait id="missing" task="worker" timeout-ms="300">
+			<contains>never-printed-marker</contains>
+		</bt-wait>
+	</run>
+
+	<then>
+		<expect-step step="ready" action="wait" matched="true"></expect-step>
+
+		<expect-step step="missing" action="wait" matched="false">
+			<field name="reason">
+				<equals>timeout</equals>
+			</field>
+			<field name="snapshot.screen">
+				<contains>timeout-worker-ready</contains>
+				<not-contains>never-printed-marker</not-contains>
+			</field>
+		</expect-step>
+
+		<expect-task task="worker" status="running" name="timeout-worker"></expect-task>
+	</then>
+
+	<cleanup>
+		<bt-stop task="worker" mode="kill"></bt-stop>
+	</cleanup>
+</scenario>

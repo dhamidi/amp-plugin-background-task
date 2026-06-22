@@ -1,0 +1,51 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="list-running" expected="pass">
+	<summary>Running background tasks appear in the task list with their names.</summary>
+
+	<defaults wait-for-idle-ms="200" history-lines="20"></defaults>
+
+	<run>
+		<bt-start id="alpha" name="list-alpha">
+			<script type="application/javascript">
+				console.log('alpha-ready')
+				setInterval(() => {}, 1_000_000)
+			</script>
+		</bt-start>
+
+		<bt-start id="bravo" name="list-bravo">
+			<script type="application/javascript">
+				console.log('bravo-ready')
+				setInterval(() => {}, 1_000_000)
+			</script>
+		</bt-start>
+
+		<bt-wait id="alpha-ready" task="alpha" timeout-ms="2000">
+			<contains>alpha-ready</contains>
+		</bt-wait>
+
+		<bt-wait id="bravo-ready" task="bravo" timeout-ms="2000">
+			<contains>bravo-ready</contains>
+		</bt-wait>
+
+		<bt-list id="listed"></bt-list>
+	</run>
+
+	<then>
+		<expect-step step="listed" action="list" status="ok">
+			<field name="tasks">
+				<contains>list-alpha</contains>
+				<contains>list-bravo</contains>
+			</field>
+		</expect-step>
+
+		<expect-task task="alpha" status="running" name="list-alpha"></expect-task>
+		<expect-task task="bravo" status="running" name="list-bravo"></expect-task>
+	</then>
+
+	<cleanup>
+		<bt-stop task="alpha" mode="kill"></bt-stop>
+		<bt-stop task="bravo" mode="kill"></bt-stop>
+	</cleanup>
+</scenario>

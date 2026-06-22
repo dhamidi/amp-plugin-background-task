@@ -1,0 +1,33 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="exited-task-reaped" expected="pass">
+	<summary>Tasks are removed from the background task list after their process exits.</summary>
+
+	<defaults wait-for-idle-ms="200" history-lines="20"></defaults>
+
+	<run>
+		<bt-start id="short-task" name="short-lived-task">
+			<script type="application/javascript">
+				console.log('done')
+			</script>
+		</bt-start>
+
+		<bt-list id="listed"></bt-list>
+	</run>
+
+	<then>
+		<expect-step step="listed" action="list" status="ok">
+			<field name="tasks.0.id">
+				<equals></equals>
+			</field>
+			<field name="message">
+				<contains>Found 0 background tasks.</contains>
+			</field>
+		</expect-step>
+
+		<expect-notification count="1">
+			<contains>process exited with status 0</contains>
+		</expect-notification>
+	</then>
+</scenario>

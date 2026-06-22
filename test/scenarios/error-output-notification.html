@@ -1,0 +1,80 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="error-output-notification" expected="pass">
+	<summary>An error-output trigger reports output that looks like a failure.</summary>
+
+	<defaults wait-for-idle-ms="100" history-lines="40"></defaults>
+
+	<run>
+		<bt-start id="worker" name="error-output-notifier">
+			<script type="application/javascript">
+				process.stdin.setEncoding('utf8')
+				let buffered = ''
+				console.log('error-output-ready')
+
+				process.stdin.on('data', (chunk) => {
+					buffered += chunk
+					const lines = buffered.split('\n')
+					buffered = lines.pop() ?? ''
+					for (const line of lines) {
+						console.error(`failure marker:${line.replace(/\r$/, '')}`)
+					}
+				})
+
+				setInterval(() => {}, 1_000_000)
+			</script>
+			<notifications enabled="false"></notifications>
+		</bt-start>
+
+		<bt-wait id="ready" task="worker" timeout-ms="2000">
+			<contains>error-output-ready</contains>
+		</bt-wait>
+
+		<bt-configure-notifications id="configure" task="worker">
+			<notifications
+				enabled="true"
+				steer="false"
+				cooldown-ms="0"
+				debounce-ms="0"
+				max-messages="1"
+			>
+				<trigger type="error-output" include-snapshot="true"></trigger>
+			</notifications>
+		</bt-configure-notifications>
+
+		<bt-send id="send-failure" task="worker">
+			boom
+			<key>Enter</key>
+		</bt-send>
+
+		<bt-wait id="saw-failure" task="worker" timeout-ms="2000">
+			<contains>failure marker:boom</contains>
+		</bt-wait>
+
+		<bt-wait id="settled" task="worker" idle-ms="200" timeout-ms="2000"></bt-wait>
+	</run>
+
+	<then>
+		<expect-step step="configure" action="configure_notifications" status="running">
+			<field name="notifications.triggers.0.type">
+				<equals>error-output</equals>
+			</field>
+		</expect-step>
+
+		<expect-step step="saw-failure" action="wait" matched="true">
+			<field name="snapshot.screen">
+				<contains>failure marker:boom</contains>
+			</field>
+		</expect-step>
+
+		<expect-notification count="1">
+			<contains>matched error-looking output</contains>
+			<contains>failure marker:boom</contains>
+		</expect-notification>
+	</then>
+
+	<cleanup>
+		<bt-stop task="worker" mode="kill"></bt-stop>
+	</cleanup>
+</scenario>

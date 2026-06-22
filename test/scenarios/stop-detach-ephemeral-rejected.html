@@ -1,0 +1,48 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="stop-detach-ephemeral-rejected" expected="pass">
+	<summary>
+		Detach for a non-keepAlive task is rejected instead of leaking an unmanaged session.
+	</summary>
+
+	<defaults wait-for-idle-ms="150" history-lines="30"></defaults>
+
+	<run>
+		<bt-start id="worker" name="ephemeral-detach-worker" keep-alive="false">
+			<script type="application/javascript">
+				console.log('ephemeral-detach-ready')
+				setInterval(() => {}, 1_000_000)
+			</script>
+		</bt-start>
+
+		<bt-wait id="ready" task="worker" timeout-ms="2000">
+			<contains>ephemeral-detach-ready</contains>
+		</bt-wait>
+
+		<bt-stop id="detach" task="worker" mode="detach"></bt-stop>
+
+		<bt-stop id="unsupported-mode" task="worker" mode="terminate"></bt-stop>
+	</run>
+
+	<then>
+		<expect-step step="detach" action="stop" status="error">
+			<field name="message">
+				<contains>detach</contains>
+				<contains>keepAlive</contains>
+			</field>
+		</expect-step>
+
+		<expect-step step="unsupported-mode" action="stop" status="error">
+			<field name="message">
+				<contains>Unsupported stop mode</contains>
+				<contains>interrupt</contains>
+				<contains>kill</contains>
+			</field>
+		</expect-step>
+	</then>
+
+	<cleanup>
+		<bt-stop task="worker" mode="kill"></bt-stop>
+	</cleanup>
+</scenario>

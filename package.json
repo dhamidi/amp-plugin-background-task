@@ -1,0 +1,17 @@
+{
+	"name": "@ampcode/plugin-background-task",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "bun run scripts/build.ts",
+		"scenarios": "bun run src/scenarios/cli.ts",
+		"test": "bun test",
+		"typecheck": "tsc -p tsconfig.json"
+	},
+	"devDependencies": {
+		"@ampcode/plugin": "0.0.0-20260622033042-gb1daf52",
+		"@types/bun": "1.3.12",
+		"@types/node": "22.19.2",
+		"typescript": "5.8.3"
+	}
+}

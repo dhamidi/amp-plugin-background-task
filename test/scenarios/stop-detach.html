@@ -1,0 +1,44 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="stop-detach" expected="pass">
+	<summary>Detach without keepAlive is rejected without terminating the background task.</summary>
+
+	<defaults wait-for-idle-ms="100" history-lines="20"></defaults>
+
+	<run>
+		<bt-start id="worker" name="detachable-worker">
+			<script type="application/javascript">
+				console.log('detachable-ready')
+				setInterval(() => {}, 1_000_000)
+			</script>
+		</bt-start>
+
+		<bt-wait id="ready" task="worker" timeout-ms="2000">
+			<contains>detachable-ready</contains>
+		</bt-wait>
+
+		<bt-stop id="detach" task="worker" mode="detach"></bt-stop>
+		<bt-snapshot id="after-detach" task="worker"></bt-snapshot>
+	</run>
+
+	<then>
+		<expect-step step="detach" action="stop" status="error">
+			<field name="message">
+				<contains>Detach is only allowed for keepAlive tasks.</contains>
+			</field>
+		</expect-step>
+
+		<expect-step step="after-detach" action="snapshot" status="running">
+			<field name="snapshot.screen">
+				<contains>detachable-ready</contains>
+			</field>
+		</expect-step>
+
+		<expect-task task="worker" status="running" name="detachable-worker"></expect-task>
+	</then>
+
+	<cleanup>
+		<bt-stop task="worker" mode="kill"></bt-stop>
+	</cleanup>
+</scenario>

@@ -1,0 +1,35 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="wait-exit" expected="pass">
+	<summary>A task that exits can be waited on and reports its exit status.</summary>
+
+	<defaults wait-for-idle-ms="100" history-lines="40"></defaults>
+
+	<run>
+		<bt-start id="short-task" name="short-lived-task">
+			<script type="application/javascript">
+				console.log('about-to-exit')
+				process.exit(7)
+			</script>
+		</bt-start>
+
+		<bt-wait id="exited" task="short-task" exited="true" timeout-ms="2000"></bt-wait>
+	</run>
+
+	<then>
+		<expect-step step="exited" action="wait" status="exited" matched="true">
+			<field name="reason">
+				<contains>task exited</contains>
+			</field>
+			<field name="snapshot.screen">
+				<contains>about-to-exit</contains>
+			</field>
+			<field name="snapshot.exitCode">
+				<equals>7</equals>
+			</field>
+		</expect-step>
+
+		<expect-task task="short-task" status="exited" name="short-lived-task"></expect-task>
+	</then>
+</scenario>

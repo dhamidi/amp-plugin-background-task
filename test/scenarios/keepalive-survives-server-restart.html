@@ -1,0 +1,54 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="keepalive-survives-server-restart" expected="pass">
+	<summary>
+		A keepAlive task remains discoverable and attachable after the manager restarts.
+	</summary>
+
+	<defaults wait-for-idle-ms="150" history-lines="40"></defaults>
+
+	<run>
+		<bt-start id="worker" name="keepalive-restart-worker" keep-alive="true">
+			<script type="application/javascript">
+				console.log('keepalive-ready')
+				let tick = 0
+				setInterval(() => console.log(`keepalive-tick:${++tick}`), 250)
+			</script>
+		</bt-start>
+
+		<bt-wait id="ready" task="worker" timeout-ms="2000">
+			<contains>keepalive-ready</contains>
+		</bt-wait>
+
+		<runner-restart id="restart" wait-after-ms="400"></runner-restart>
+
+		<bt-list id="listed"></bt-list>
+		<bt-snapshot id="after-restart" task="worker"></bt-snapshot>
+	</run>
+
+	<then>
+		<expect-step step="restart" action="runner_restart" status="ok"></expect-step>
+
+		<expect-step step="listed" action="list" status="ok">
+			<field name="tasks.0.name">
+				<equals>keepalive-restart-worker</equals>
+			</field>
+			<field name="tasks.0.status">
+				<equals>running</equals>
+			</field>
+		</expect-step>
+
+		<expect-step step="after-restart" action="snapshot" status="running">
+			<field name="snapshot.screen">
+				<contains>keepalive-ready</contains>
+			</field>
+		</expect-step>
+
+		<expect-task task="worker" status="running" name="keepalive-restart-worker"></expect-task>
+	</then>
+
+	<cleanup>
+		<bt-stop task="worker" mode="kill"></bt-stop>
+	</cleanup>
+</scenario>

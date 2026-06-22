@@ -1,0 +1,68 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="send-multiline" expected="pass">
+	<summary>Multiline send text is delivered as separate terminal lines.</summary>
+
+	<defaults wait-for-idle-ms="100" history-lines="40"></defaults>
+
+	<run>
+		<bt-start id="reader" name="multiline-reader">
+			<script type="application/javascript">
+				process.stdin.setEncoding('utf8')
+				let buffered = ''
+				let lineNumber = 0
+
+				process.stdin.on('data', (chunk) => {
+					buffered += chunk
+					const lines = buffered.split('\n')
+					buffered = lines.pop() ?? ''
+					for (const line of lines) {
+						lineNumber += 1
+						console.log(`line-${lineNumber}:${line.replace(/\r$/, '')}`)
+					}
+				})
+
+				console.log('reader-ready')
+				setInterval(() => {}, 1_000_000)
+			</script>
+		</bt-start>
+
+		<bt-wait id="ready" task="reader" timeout-ms="2000">
+			<contains>reader-ready</contains>
+		</bt-wait>
+
+		<bt-send id="send-lines" task="reader">
+			<pre>
+				first line
+				second line
+			</pre>
+			<key>Enter</key>
+		</bt-send>
+
+		<bt-wait id="received" task="reader" timeout-ms="2000">
+			<contains>line-2:second line</contains>
+		</bt-wait>
+	</run>
+
+	<then>
+		<expect-step step="send-lines" action="send" status="running">
+			<field name="snapshot.screen">
+				<contains>line-1:first line</contains>
+			</field>
+		</expect-step>
+
+		<expect-step step="received" action="wait" matched="true">
+			<field name="snapshot.screen">
+				<contains>line-1:first line</contains>
+				<contains>line-2:second line</contains>
+			</field>
+		</expect-step>
+
+		<expect-task task="reader" status="running" name="multiline-reader"></expect-task>
+	</then>
+
+	<cleanup>
+		<bt-stop task="reader" mode="kill"></bt-stop>
+	</cleanup>
+</scenario>

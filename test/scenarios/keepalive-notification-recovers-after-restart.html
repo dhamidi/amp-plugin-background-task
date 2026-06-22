@@ -1,0 +1,59 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="keepalive-notification-recovers-after-restart" expected="pass">
+	<summary>
+		A keepAlive notification task is reattached on startup and can notify from recovered output.
+	</summary>
+
+	<defaults wait-for-idle-ms="150" history-lines="60"></defaults>
+
+	<run>
+		<bt-start id="worker" name="keepalive-notification-recovery" keep-alive="true">
+			<script type="application/javascript">
+				console.log('notification-recovery-ready')
+				setTimeout(() => console.log('event:notify-after-restart'), 500)
+				setInterval(() => {}, 1_000_000)
+			</script>
+			<notifications
+				enabled="true"
+				steer="false"
+				cooldown-ms="0"
+				debounce-ms="0"
+				max-messages="1"
+			>
+				<trigger
+					type="contains"
+					pattern="event:notify-after-restart"
+					include-snapshot="true"
+				></trigger>
+			</notifications>
+		</bt-start>
+
+		<bt-wait id="ready" task="worker" timeout-ms="2000">
+			<contains>notification-recovery-ready</contains>
+		</bt-wait>
+
+		<runner-restart id="restart" wait-after-ms="900"></runner-restart>
+		<bt-snapshot id="after-restart" task="worker"></bt-snapshot>
+	</run>
+
+	<then>
+		<expect-step step="restart" action="runner_restart" status="ok"></expect-step>
+
+		<expect-step step="after-restart" action="snapshot" status="running">
+			<field name="snapshot.screen">
+				<contains>event:notify-after-restart</contains>
+			</field>
+		</expect-step>
+
+		<expect-notification count="1">
+			<contains>matched "event:notify-after-restart"</contains>
+			<contains>Use background_task with action="snapshot"</contains>
+		</expect-notification>
+	</then>
+
+	<cleanup>
+		<bt-stop task="worker" mode="kill"></bt-stop>
+	</cleanup>
+</scenario>

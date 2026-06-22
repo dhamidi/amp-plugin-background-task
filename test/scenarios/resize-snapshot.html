@@ -1,0 +1,63 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="resize-snapshot" expected="pass">
+	<summary>A running task can be resized and snapshotted at the new dimensions.</summary>
+
+	<defaults wait-for-idle-ms="200" history-lines="40"></defaults>
+
+	<run>
+		<bt-start id="server" name="resizable-task" cols="60" rows="10">
+			<script type="application/javascript">
+				console.log('resize-ready')
+				setInterval(() => {}, 1_000_000)
+			</script>
+		</bt-start>
+
+		<bt-wait id="ready" task="server" timeout-ms="2000">
+			<contains>resize-ready</contains>
+		</bt-wait>
+
+		<bt-resize id="resized" task="server" cols="90" rows="18"></bt-resize>
+
+		<bt-snapshot id="screen" task="server"></bt-snapshot>
+	</run>
+
+	<then>
+		<expect-step step="ready" action="wait" matched="true">
+			<field name="snapshot.screen">
+				<contains>resize-ready</contains>
+			</field>
+		</expect-step>
+
+		<expect-step step="resized" action="resize" status="running">
+			<field name="snapshot.dimensions.cols">
+				<equals>90</equals>
+			</field>
+			<field name="snapshot.dimensions.rows">
+				<equals>18</equals>
+			</field>
+			<field name="snapshot.screen">
+				<contains>resize-ready</contains>
+			</field>
+		</expect-step>
+
+		<expect-step step="screen" action="snapshot" status="running">
+			<field name="snapshot.dimensions.cols">
+				<equals>90</equals>
+			</field>
+			<field name="snapshot.dimensions.rows">
+				<equals>18</equals>
+			</field>
+			<field name="snapshot.screen">
+				<contains>resize-ready</contains>
+			</field>
+		</expect-step>
+
+		<expect-task task="server" status="running" name="resizable-task"></expect-task>
+	</then>
+
+	<cleanup>
+		<bt-stop task="server" mode="kill"></bt-stop>
+	</cleanup>
+</scenario>

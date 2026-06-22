@@ -1,0 +1,61 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="interactive-send" expected="pass">
+	<summary>Text and keys sent to an interactive task become visible in task output.</summary>
+
+	<defaults wait-for-idle-ms="200"></defaults>
+
+	<run>
+		<bt-start id="reader" name="line-reader">
+			<script type="application/javascript">
+				process.stdin.setEncoding('utf8')
+				let buffered = ''
+				console.log('reader-ready')
+				for await (const chunk of process.stdin) {
+					buffered += chunk
+					const lines = buffered.split('\n')
+					buffered = lines.pop() ?? ''
+					for (const line of lines) console.log(`saw:${line.replace(/\r$/, '')}`)
+				}
+			</script>
+		</bt-start>
+
+		<bt-wait id="ready" task="reader" timeout-ms="2000">
+			<contains>reader-ready</contains>
+		</bt-wait>
+
+		<bt-send id="send-line" task="reader" wait-for-idle-ms="200">
+			hello from scenario
+			<key>Enter</key>
+		</bt-send>
+
+		<bt-wait id="echoed" task="reader" timeout-ms="2000">
+			<contains>saw:hello from scenario</contains>
+		</bt-wait>
+	</run>
+
+	<then>
+		<expect-step step="ready" action="wait" matched="true">
+			<field name="snapshot.screen">
+				<contains>reader-ready</contains>
+			</field>
+		</expect-step>
+
+		<expect-step step="echoed" action="wait" matched="true">
+			<field name="snapshot.screen">
+				<contains>saw:hello from scenario</contains>
+			</field>
+		</expect-step>
+
+		<expect-output task="reader">
+			<contains>saw:hello from scenario</contains>
+		</expect-output>
+
+		<expect-task task="reader" status="running" name="line-reader"></expect-task>
+	</then>
+
+	<cleanup>
+		<bt-stop task="reader" mode="kill"></bt-stop>
+	</cleanup>
+</scenario>

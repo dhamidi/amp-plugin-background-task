@@ -1,0 +1,52 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="stop-detach-keepalive-recoverable" expected="pass">
+	<summary>
+		Detach for a keepAlive task drops runtime state but leaves the task recoverable.
+	</summary>
+
+	<defaults wait-for-idle-ms="150" history-lines="40"></defaults>
+
+	<run>
+		<bt-start id="worker" name="keepalive-detach-worker" keep-alive="true">
+			<script type="application/javascript">
+				console.log('keepalive-detach-ready')
+				setInterval(() => {}, 1_000_000)
+			</script>
+		</bt-start>
+
+		<bt-wait id="ready" task="worker" timeout-ms="2000">
+			<contains>keepalive-detach-ready</contains>
+		</bt-wait>
+
+		<bt-stop id="detach" task="worker" mode="detach"></bt-stop>
+		<runner-restart id="restart"></runner-restart>
+		<bt-list id="listed"></bt-list>
+		<bt-snapshot id="after-restart" task="worker"></bt-snapshot>
+	</run>
+
+	<then>
+		<expect-step step="detach" action="stop" status="running">
+			<field name="message">
+				<contains>Detached</contains>
+			</field>
+		</expect-step>
+
+		<expect-step step="listed" action="list" status="ok">
+			<field name="tasks.0.name">
+				<equals>keepalive-detach-worker</equals>
+			</field>
+		</expect-step>
+
+		<expect-step step="after-restart" action="snapshot" status="running">
+			<field name="snapshot.screen">
+				<contains>keepalive-detach-ready</contains>
+			</field>
+		</expect-step>
+	</then>
+
+	<cleanup>
+		<bt-stop task="worker" mode="kill"></bt-stop>
+	</cleanup>
+</scenario>

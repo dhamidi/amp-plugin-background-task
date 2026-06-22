@@ -1,0 +1,43 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="stop-interrupt" expected="pass">
+	<summary>An interrupt stop gives the task a chance to exit before the runner kills it.</summary>
+
+	<defaults wait-for-idle-ms="100" history-lines="20"></defaults>
+
+	<run>
+		<bt-start id="worker" name="interruptible-worker">
+			<script type="application/javascript">
+				process.on('SIGINT', () => {
+					console.log('interrupted-cleanly')
+					process.exit(0)
+				})
+
+				console.log('ready-for-interrupt')
+				setInterval(() => {}, 1_000_000)
+			</script>
+		</bt-start>
+
+		<bt-wait id="ready" task="worker" timeout-ms="2000">
+			<contains>ready-for-interrupt</contains>
+		</bt-wait>
+
+		<bt-stop id="interrupt" task="worker" mode="interrupt" grace-ms="1000"></bt-stop>
+	</run>
+
+	<then>
+		<expect-step step="ready" action="wait" matched="true"></expect-step>
+
+		<expect-step step="interrupt" action="stop" status="exited">
+			<field name="message">
+				<contains>Interrupted</contains>
+			</field>
+			<field name="task.exitCode">
+				<equals>0</equals>
+			</field>
+		</expect-step>
+
+		<expect-task task="worker" status="exited" name="interruptible-worker"></expect-task>
+	</then>
+</scenario>

@@ -1,0 +1,50 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="start-dimensions" expected="pass">
+	<summary>
+		Start accepts custom terminal dimensions and reports them in the initial snapshot.
+	</summary>
+
+	<defaults wait-for-idle-ms="100" history-lines="20"></defaults>
+
+	<run>
+		<bt-start id="worker" name="dimension-worker" cols="72" rows="12">
+			<script type="application/javascript">
+				console.log('dimension-worker-ready')
+				setInterval(() => {}, 1_000_000)
+			</script>
+		</bt-start>
+
+		<bt-snapshot id="snapshot" task="worker"></bt-snapshot>
+	</run>
+
+	<then>
+		<expect-step step="worker" action="start" status="running">
+			<field name="snapshot.dimensions.cols">
+				<equals>72</equals>
+			</field>
+			<field name="snapshot.dimensions.rows">
+				<equals>12</equals>
+			</field>
+			<field name="snapshot.screen">
+				<contains>dimension-worker-ready</contains>
+			</field>
+		</expect-step>
+
+		<expect-step step="snapshot" action="snapshot" status="running">
+			<field name="snapshot.dimensions.cols">
+				<equals>72</equals>
+			</field>
+			<field name="snapshot.dimensions.rows">
+				<equals>12</equals>
+			</field>
+		</expect-step>
+
+		<expect-task task="worker" status="running" name="dimension-worker"></expect-task>
+	</then>
+
+	<cleanup>
+		<bt-stop task="worker" mode="kill"></bt-stop>
+	</cleanup>
+</scenario>

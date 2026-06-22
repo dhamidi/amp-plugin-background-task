@@ -1,0 +1,88 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<scenario id="idle-notification" expected="pass">
+	<summary>
+		An idle notification fires after output has stopped for the configured interval.
+	</summary>
+
+	<defaults wait-for-idle-ms="100" history-lines="40"></defaults>
+
+	<run>
+		<bt-start id="worker" name="idle-notifier">
+			<script type="application/javascript">
+				process.stdin.setEncoding('utf8')
+				let buffered = ''
+				console.log('idle-notifier-ready')
+
+				process.stdin.on('data', (chunk) => {
+					buffered += chunk
+					const lines = buffered.split('\n')
+					buffered = lines.pop() ?? ''
+					for (const line of lines) console.log(`pulse:${line.replace(/\r$/, '')}`)
+				})
+
+				setInterval(() => {}, 1_000_000)
+			</script>
+			<notifications enabled="false"></notifications>
+		</bt-start>
+
+		<bt-wait id="ready" task="worker" timeout-ms="2000">
+			<contains>idle-notifier-ready</contains>
+		</bt-wait>
+
+		<bt-configure-notifications id="configure" task="worker">
+			<notifications
+				enabled="true"
+				steer="false"
+				cooldown-ms="0"
+				debounce-ms="0"
+				max-messages="1"
+			>
+				<trigger
+					type="idle"
+					idle-ms="200"
+					after-output="true"
+					include-snapshot="true"
+				></trigger>
+			</notifications>
+		</bt-configure-notifications>
+
+		<bt-send id="send-pulse" task="worker">
+			one
+			<key>Enter</key>
+		</bt-send>
+
+		<bt-wait id="saw-pulse" task="worker" timeout-ms="2000">
+			<contains>pulse:one</contains>
+		</bt-wait>
+
+		<bt-wait id="quiet" task="worker" idle-ms="500" timeout-ms="3000"></bt-wait>
+	</run>
+
+	<then>
+		<expect-step step="configure" action="configure_notifications" status="running">
+			<field name="notifications.triggers.0.type">
+				<equals>idle</equals>
+			</field>
+			<field name="notifications.triggers.0.idleMs">
+				<equals>200</equals>
+			</field>
+		</expect-step>
+
+		<expect-step step="quiet" action="wait" matched="true">
+			<field name="reason">
+				<contains>idle for 500ms</contains>
+			</field>
+		</expect-step>
+
+		<expect-notification count="1">
+			<contains>terminal idle for 200ms</contains>
+			<contains>pulse:one</contains>
+		</expect-notification>
+	</then>
+
+	<cleanup>
+		<bt-stop task="worker" mode="kill"></bt-stop>
+	</cleanup>
+</scenario>
